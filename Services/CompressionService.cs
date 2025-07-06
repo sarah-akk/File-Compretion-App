@@ -31,13 +31,13 @@ namespace FileCompressorApp.Services
                 }
 
                 var tempPath = Path.GetTempFileName(); // Temporarily save merged content
-                File.WriteAllText(tempPath, combinedText.ToString());
+                File.WriteAllText(tempPath, combinedText.ToString() , Encoding.UTF8);
                 result.OriginalSize = new FileInfo(tempPath).Length;
 
                 switch (algorithm)
                 {
                     case "Huffman":
-                        HuffmanCompressor.Compress(tempPath, archiveOutputPath, token);
+                        HuffmanCompressor.Compress(tempPath, "", token);
                         break;
 
                     case "Shannon-Fano":

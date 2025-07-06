@@ -77,7 +77,6 @@
             <!-- ✅ تبويب فك الضغط -->
             <TabItem Header="🗃️ فك الضغط">
                 <StackPanel Margin="10" >
-                    <Button Content="📂 اختر ملف مضغوط" Height="30" Width="150" Click="SelectArchive_Click" Margin="5" Padding="10,5"/>
                     <TextBlock x:Name="SelectedArchiveText" Margin="5" Foreground="Gray" TextAlignment="Center"/>
                     <Button  Height="30" Width="150"  Content="🧩 فك الضغط الآن" Click="ExtractArchive_Click" Margin="10" Padding="10,5"/>
                     <ListBox x:Name="ExtractionResultsListBox" Margin="5" Height="200" BorderBrush="Gray" BorderThickness="1"/>

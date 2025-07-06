@@ -15,17 +15,37 @@ namespace FileCompressorApp
 
         ////=============================================================>
 
-        private void SelectArchive_Click(object sender, RoutedEventArgs e)
+        private void ExtractArchive_Click(object sender, RoutedEventArgs e)
         {
-          
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Huffman Archive (*.huf)|*.huf"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                string archivePath = dialog.FileName;
+
+                var folderDialog = new System.Windows.Forms.FolderBrowserDialog();
+                var result = folderDialog.ShowDialog();
+
+                if (result == System.Windows.Forms.DialogResult.OK)
+                {
+                    string outputFolder = folderDialog.SelectedPath;
+
+                    try
+                    {
+                        HuffmanCompressor.Decompress(archivePath, outputFolder);
+                        System.Windows.MessageBox.Show("تم فك الضغط بنجاح!", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"حدث خطأ: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                }
+            }
         }
 
-        ////=============================================================>
-
-        private async void ExtractArchive_Click(object sender, RoutedEventArgs e)
-        {
-          
-        }
 
         ////=============================================================>
         public void UpdateFileCount() => FileCountText.Text = $"عدد الملفات: {FilesListBox.Items.Count}";
