@@ -1,60 +1,62 @@
-﻿using System;
+﻿using FileCompressorApp.Models;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using FileCompressorApp.Models;
+using System.Text;
 
 namespace FileCompressorApp.Services
 {
     public static class CompressionService
     {
-        public static List<CompressionResult> Compress(List<string> filePaths, string algorithm, CancellationToken token)
+        public static CompressionResult CompressToArchive(List<string> filePaths, string algorithm, string archiveOutputPath, CancellationToken token)
         {
-            var results = new List<CompressionResult>();
+            if (token.IsCancellationRequested)
+                token.ThrowIfCancellationRequested();
 
-            foreach (var file in filePaths)
+            var result = new CompressionResult
             {
-                if (token.IsCancellationRequested)
+                FileName = Path.GetFileName(archiveOutputPath),
+                AlgorithmUsed = algorithm
+            };
+
+            try
+            {
+                var combinedText = new StringBuilder();
+
+                foreach (var file in filePaths)
                 {
-                    token.ThrowIfCancellationRequested();
+                    string content = File.ReadAllText(file);
+                    combinedText.AppendLine($"###FILE:{Path.GetFileName(file)}###");
+                    combinedText.Append(content);
                 }
 
-                var result = new CompressionResult
+                var tempPath = Path.GetTempFileName(); // Temporarily save merged content
+                File.WriteAllText(tempPath, combinedText.ToString());
+                result.OriginalSize = new FileInfo(tempPath).Length;
+
+                switch (algorithm)
                 {
-                    FileName = Path.GetFileName(file),
-                    AlgorithmUsed = algorithm
-                };
+                    case "Huffman":
+                        HuffmanCompressor.Compress(tempPath, archiveOutputPath, token);
+                        break;
 
-                try
-                {
-                    var outputFile = $"{file}.compressed";
-                    result.OriginalSize = new FileInfo(file).Length;
+                    case "Shannon-Fano":
+                        ShannonFanoCompressor.Compress(tempPath, archiveOutputPath, token);
+                        break;
 
-                    switch (algorithm)
-                    {
-                        case "Huffman":
-                            HuffmanCompressor.Compress(file, outputFile, token);
-                            break;
-
-                        case "Shannon-Fano":
-                            ShannonFanoCompressor.Compress(file, outputFile, token);
-                            break;
-
-                        default:
-                            throw new ArgumentException("خوارزمية غير مدعومة");
-                    }
-
-                    result.CompressedSize = new FileInfo(outputFile).Length;
-                    File.AppendAllText("log.txt", $"ضغط الملف: {result.FileName} باستخدام: {algorithm}\n");
-                }
-                catch (Exception ex)
-                {
-                    result.Error = ex.Message;
+                    default:
+                        throw new ArgumentException("خوارزمية غير مدعومة");
                 }
 
-                results.Add(result);
+                result.CompressedSize = new FileInfo(archiveOutputPath).Length;
+                File.AppendAllText("log.txt", $"تم ضغط أرشيف: {result.FileName} باستخدام: {algorithm}\n");
+            }
+            catch (Exception ex)
+            {
+                result.Error = ex.Message;
             }
 
-            return results;
+            return result;
         }
 
 

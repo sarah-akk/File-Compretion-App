@@ -17,39 +17,14 @@ namespace FileCompressorApp
 
         private void SelectArchive_Click(object sender, RoutedEventArgs e)
         {
-            //var archive = FileService.SelectArchive(); // أنشئ هذه الدالة في FileService
-            //if (!string.IsNullOrEmpty(archive))
-            //{
-            //    _selectedArchive = archive;
-            //    SelectedArchiveText.Text = $"الملف المحدد: {System.IO.Path.GetFileName(archive)}";
-            //}
+          
         }
 
         ////=============================================================>
 
         private async void ExtractArchive_Click(object sender, RoutedEventArgs e)
         {
-            //if (string.IsNullOrEmpty(_selectedArchive))
-            //{
-            //    MessageBox.Show("يرجى اختيار ملف مضغوط أولاً.", "تنبيه", MessageBoxButton.OK, MessageBoxImage.Warning);
-            //    return;
-            //}
-
-            //try
-            //{
-            //    ExtractionResultsListBox.Items.Clear();
-            //    var extractedFiles = await Task.Run(() => CompressionService.Extract(_selectedArchive));
-            //    foreach (var file in extractedFiles)
-            //    {
-            //        ExtractionResultsListBox.Items.Add($"✅ {file}");
-            //    }
-
-            //    MessageBox.Show("تم فك الضغط بنجاح!", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
-            //}
-            //catch (Exception ex)
-            //{
-            //    MessageBox.Show($"حدث خطأ أثناء فك الضغط:\n{ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
-            //}
+          
         }
 
         ////=============================================================>
@@ -131,10 +106,12 @@ namespace FileCompressorApp
             foreach (var item in FilesListBox.Items)
                 fileList.Add(item.ToString());
 
+            string archivePath = "archive.huf";
+
             try
             {
                 var results = await Task.Run(() =>
-                    CompressionService.Compress(fileList, algorithm, _cts.Token)
+                    CompressionService.CompressToArchive(fileList, algorithm, archivePath, _cts.Token)
                 );
 
                 if (_cts.Token.IsCancellationRequested)
@@ -142,22 +119,22 @@ namespace FileCompressorApp
                     throw new OperationCanceledException();
                 }
 
-                foreach (var result in results)
+                var result = results;
+
+                if (!string.IsNullOrEmpty(result.Error))
                 {
-                    if (!string.IsNullOrEmpty(result.Error))
-                    {
-                        CompressionResultsListBox.Items.Add($"❌ {result.FileName} - خطأ: {result.Error}");
-                    }
-                    else
-                    {
-                        CompressionResultsListBox.Items.Add(
-                            $"📄 {result.FileName}\n" +
-                            $"  ⮕ الحجم الأصلي: {result.OriginalSize} بايت\n" +
-                            $"  ⮕ الحجم بعد الضغط: {result.CompressedSize} بايت\n" +
-                            $"  ⮕ نسبة الضغط: {result.CompressionRatio * 100:F2}%"
-                        );
-                    }
+                    CompressionResultsListBox.Items.Add($"❌ {result.FileName} - خطأ: {result.Error}");
                 }
+                else
+                {
+                    CompressionResultsListBox.Items.Add(
+                        $"📄 {result.FileName}\n" +
+                        $"  ⮕ الحجم الأصلي: {result.OriginalSize} بايت\n" +
+                        $"  ⮕ الحجم بعد الضغط: {result.CompressedSize} بايت\n" +
+                        $"  ⮕ نسبة الضغط: {result.CompressionRatio * 100:F2}%"
+                    );
+                }
+
 
                 System.Windows.MessageBox.Show("تم ضغط الملفات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
             }
