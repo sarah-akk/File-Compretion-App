@@ -48,6 +48,51 @@ namespace FileCompressorApp
             }
         }
 
+        ////=============================================================>
+        private void ExtractSingleFileFromArchive_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Huffman Archive (*.huf)|*.huf"
+            };
+
+            if (dialog.ShowDialog() == true)
+            {
+                string archivePath = dialog.FileName;
+
+                // استخراج قائمة الملفات داخل الأرشيف
+                var filesInArchive = HuffmanCompressor.ListFilesInArchive(archivePath);
+                if (filesInArchive == null || filesInArchive.Count == 0)
+                {
+                    System.Windows.MessageBox.Show("الأرشيف فارغ أو تالف.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // اختيار الملف من قائمة
+                var selectFileDialog = new SelectFileDialog(filesInArchive); // سنضيفه لاحقاً
+                if (selectFileDialog.ShowDialog() == true)
+                {
+                    string selectedFile = selectFileDialog.SelectedFile;
+
+                    var folderDialog = new System.Windows.Forms.FolderBrowserDialog();
+                    if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    {
+                        string outputFolder = folderDialog.SelectedPath;
+
+                        try
+                        {
+                            HuffmanCompressor.ExtractSingleFile(archivePath, selectedFile, outputFolder);
+                            System.Windows.MessageBox.Show($"تم استخراج {selectedFile} بنجاح.", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Windows.MessageBox.Show($"حدث خطأ أثناء استخراج الملف: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
+                    }
+                }
+            }
+        }
+
 
         ////=============================================================>
         public void UpdateFileCount() => FileCountText.Text = $"عدد الملفات: {FilesListBox.Items.Count}";

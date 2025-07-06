@@ -1,0 +1,12 @@
+﻿<Window x:Class="FileCompressorApp.SelectFileDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="اختر ملف" Height="300" Width="400">
+    <Grid Margin="10">
+        <ListBox x:Name="FilesListBox" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,10">
+            <Button Content="موافق" Width="80" Margin="5" Click="OkButton_Click"/>
+            <Button Content="إلغاء" Width="80" Margin="5" Click="CancelButton_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

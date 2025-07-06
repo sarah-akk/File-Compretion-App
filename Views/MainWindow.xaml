@@ -76,9 +76,14 @@
 
             <!-- ✅ تبويب فك الضغط -->
             <TabItem Header="🗃️ فك الضغط">
-                <StackPanel Margin="10" >
+                <StackPanel Margin="10">
                     <TextBlock x:Name="SelectedArchiveText" Margin="5" Foreground="Gray" TextAlignment="Center"/>
-                    <Button  Height="30" Width="150"  Content="🧩 فك الضغط الآن" Click="ExtractArchive_Click" Margin="10" Padding="10,5"/>
+
+                    <Button Height="30" Width="150" Content="🧩 فك الضغط الآن" Click="ExtractArchive_Click" Margin="10" Padding="10,5"/>
+
+                    <!-- ✅ زر جديد لاستخراج ملف واحد -->
+                    <Button Height="30" Width="180" Content="📄 استخراج ملف واحد" Click="ExtractSingleFileFromArchive_Click" Margin="10" Padding="10,5"/>
+
                     <ListBox x:Name="ExtractionResultsListBox" Margin="5" Height="200" BorderBrush="Gray" BorderThickness="1"/>
                 </StackPanel>
             </TabItem>

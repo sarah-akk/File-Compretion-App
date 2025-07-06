@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace FileCompressorApp.Services
@@ -53,11 +54,10 @@ namespace FileCompressorApp.Services
                             throw new ArgumentException("خوارزمية غير مدعومة");
                     }
 
-                    // اكتب طول اسم الملف واسم الملف
                     writer.Write(fileName.Length);
                     writer.Write(fileName.ToCharArray());
 
-                    // اكتب طول البيانات المضغوطة وطبيعتها
+                    writer.Write(algorithm); // إضافة نوع الخوارزمية
                     writer.Write(compressedBytes.Length);
                     writer.Write(compressedBytes);
                 }
@@ -76,7 +76,6 @@ namespace FileCompressorApp.Services
         }
 
         //=============================================================>
-
 
         public static void DecompressArchive(string archiveInputPath, string outputFolder, CancellationToken token)
         {
@@ -97,18 +96,73 @@ namespace FileCompressorApp.Services
                     token.ThrowIfCancellationRequested();
 
                 int fileNameLen = reader.ReadInt32();
-                var fileNameChars = reader.ReadChars(fileNameLen);
-                string fileName = new string(fileNameChars);
+                string fileName = new string(reader.ReadChars(fileNameLen));
 
+                string algorithm = reader.ReadString();
                 int compressedLength = reader.ReadInt32();
                 byte[] compressedBytes = reader.ReadBytes(compressedLength);
 
-                byte[] decompressedBytes = HuffmanCompressor.DecompressBytes(compressedBytes);
+                byte[] decompressedBytes = algorithm switch
+                {
+                    "Huffman" => HuffmanCompressor.DecompressBytes(compressedBytes),
+                    "Shannon-Fano" => ShannonFanoCompressor.DecompressBytes(compressedBytes, token),
+                    _ => throw new ArgumentException("خوارزمية غير معروفة")
+                };
 
                 string outputFilePath = Path.Combine(outputFolder, fileName);
                 File.WriteAllBytes(outputFilePath, decompressedBytes);
             }
         }
 
+        //=============================================================>
+        public static void ExtractSingleFileFromArchive(string archiveInputPath, string outputFolder, string targetFileName, CancellationToken token)
+        {
+            using var archiveStream = new FileStream(archiveInputPath, FileMode.Open);
+            using var reader = new BinaryReader(archiveStream);
+
+            int fileCount = reader.ReadInt32();
+
+            for (int i = 0; i < fileCount; i++)
+            {
+                if (token.IsCancellationRequested)
+                    token.ThrowIfCancellationRequested();
+
+                int fileNameLen = reader.ReadInt32();
+                string fileName = new string(reader.ReadChars(fileNameLen));
+
+                string algorithm = reader.ReadString();
+                int compressedLength = reader.ReadInt32();
+
+                if (fileName.Equals(targetFileName, StringComparison.OrdinalIgnoreCase))
+                {
+                    byte[] compressedBytes = reader.ReadBytes(compressedLength);
+
+                    byte[] decompressedBytes = algorithm switch
+                    {
+                        "Huffman" => HuffmanCompressor.DecompressBytes(compressedBytes),
+                        "Shannon-Fano" => ShannonFanoCompressor.DecompressBytes(compressedBytes, token),
+                        _ => throw new ArgumentException("خوارزمية غير معروفة")
+                    };
+
+                    if (!Directory.Exists(outputFolder))
+                        Directory.CreateDirectory(outputFolder);
+
+                    string outputFilePath = Path.Combine(outputFolder, fileName);
+                    File.WriteAllBytes(outputFilePath, decompressedBytes);
+
+                    File.AppendAllText("log.txt", $"✅ تم استخراج الملف المفرد: {fileName} من الأرشيف\n");
+                    return;
+                }
+                else
+                {
+                    // تخطي البيانات المضغوطة لهذا الملف لأنه ليس هو المطلوب
+                    archiveStream.Seek(compressedLength, SeekOrigin.Current);
+                }
+            }
+
+        
+
+            throw new FileNotFoundException($"الملف المطلوب '{targetFileName}' غير موجود في الأرشيف.");
+        }
     }
 }
