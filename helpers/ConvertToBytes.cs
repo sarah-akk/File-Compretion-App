@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 
 namespace FileCompressorApp.Helpers
 {
@@ -18,6 +19,21 @@ namespace FileCompressorApp.Helpers
             }
 
             return bytes;
+        }
+
+        public static string ConvertToBitString(byte[] bytes, int bitLength)
+        {
+            var sb = new StringBuilder(bitLength);
+
+            for (int i = 0; i < bitLength; i++)
+            {
+                int byteIndex = i / 8;
+                int bitIndex = 7 - (i % 8);
+                bool bit = (bytes[byteIndex] & (1 << bitIndex)) != 0;
+                sb.Append(bit ? '1' : '0');
+            }
+
+            return sb.ToString();
         }
     }
 }

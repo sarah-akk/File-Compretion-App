@@ -35,7 +35,9 @@ namespace FileCompressorApp
 
                     try
                     {
-                        HuffmanCompressor.Decompress(archivePath, outputFolder);
+                        // استدعاء الدالة لفك ضغط الأرشيف كاملاً
+                        CompressionService.DecompressArchive(archivePath, outputFolder, CancellationToken.None);
+
                         System.Windows.MessageBox.Show("تم فك الضغط بنجاح!", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     catch (Exception ex)

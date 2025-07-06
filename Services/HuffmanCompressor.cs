@@ -28,6 +28,8 @@ namespace FileCompressorApp.Services
             return freq;
         }
 
+        //=============================================================>
+
         private static Node BuildHuffmanTree(Dictionary<byte, int> freqTable)
         {
             var queue = new List<Node>();
@@ -57,6 +59,8 @@ namespace FileCompressorApp.Services
             return queue[0];
         }
 
+        //=============================================================>
+
         private static void BuildCodeTable(Node node, string code, Dictionary<byte, string> codeTable)
         {
             if (node == null) return;
@@ -70,72 +74,59 @@ namespace FileCompressorApp.Services
             BuildCodeTable(node.Right, code + "1", codeTable);
         }
 
-        public static void Compress(string inputPath, string outputPath, CancellationToken token = default)
-        {
-            if (token.IsCancellationRequested)
-                throw new OperationCanceledException(token);
+        //=============================================================>
 
-            byte[] fileBytes = File.ReadAllBytes(inputPath);
-
-            var freqTable = BuildFrequencyTable(fileBytes);
-            var root = BuildHuffmanTree(freqTable);
-            var codeTable = new Dictionary<byte, string>();
-            BuildCodeTable(root, "", codeTable);
-
-            var encodedBits = new StringBuilder();
-            foreach (byte b in fileBytes)
+        public static byte[] CompressBytes(byte[] fileBytes)
             {
-                encodedBits.Append(codeTable[b]);
+                var freqTable = BuildFrequencyTable(fileBytes);
+                var root = BuildHuffmanTree(freqTable);
+                var codeTable = new Dictionary<byte, string>();
+                BuildCodeTable(root, "", codeTable);
+
+                var encodedBits = new StringBuilder();
+                foreach (byte b in fileBytes)
+                    encodedBits.Append(codeTable[b]);
+
+                string bitString = encodedBits.ToString();
+                var byteList = new List<byte>();
+                for (int i = 0; i < bitString.Length; i += 8)
+                {
+                    string byteStr = bitString.Substring(i, Math.Min(8, bitString.Length - i));
+                    if (byteStr.Length < 8)
+                        byteStr = byteStr.PadRight(8, '0');
+                    byteList.Add(Convert.ToByte(byteStr, 2));
+                }
+
+                using var ms = new MemoryStream();
+                using var writer = new BinaryWriter(ms);
+
+                // اكتب عدد الرموز
+                writer.Write(codeTable.Count);
+                foreach (var kvp in codeTable)
+                {
+                    writer.Write(kvp.Key);
+                    writer.Write(kvp.Value);
+                }
+
+                // اكتب طول البتات الفعلية
+                writer.Write(bitString.Length);
+
+                // اكتب البيانات المضغوطة
+                writer.Write(byteList.ToArray());
+
+                writer.Flush();
+                return ms.ToArray();
             }
 
-            // Convert bit string to byte[]
-            var bitString = encodedBits.ToString();
-            var byteList = new List<byte>();
-            for (int i = 0; i < bitString.Length; i += 8)
+
+        //=============================================================>
+
+
+        // فك الضغط من بايتات مضغوطة (لتستخدمها في فك الأرشيف)
+        public static byte[] DecompressBytes(byte[] compressedData)
             {
-                string byteStr = bitString.Substring(i, Math.Min(8, bitString.Length - i));
-                if (byteStr.Length < 8)
-                    byteStr = byteStr.PadRight(8, '0'); // pad with zeros
-                byteList.Add(Convert.ToByte(byteStr, 2));
-            }
-
-            using var stream = new BinaryWriter(File.Open(outputPath, FileMode.Create));
-
-            // Write header: number of symbols
-            stream.Write(codeTable.Count);
-            foreach (var kvp in codeTable)
-            {
-                stream.Write(kvp.Key);                // Symbol (byte)
-                stream.Write(kvp.Value);              // Code string
-            }
-
-            // Write bit length
-            stream.Write(bitString.Length); // actual number of bits used (not padded)
-
-            // Write data
-            stream.Write(byteList.ToArray());
-        }
-
-
-
-
-
-
-        public static void Decompress(string inputPath, string outputFolder)
-        {
-            // إذا لم يتم تحديد مسار أو مسار فارغ، استخدم مجلد مؤقت
-            if (string.IsNullOrWhiteSpace(outputFolder))
-            {
-                outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FileCompressorOutput");
-            }
-
-            try
-            {
-                // تأكد أن المجلد موجود أو أنشئه
-                if (!Directory.Exists(outputFolder))
-                    Directory.CreateDirectory(outputFolder);
-
-                using var reader = new BinaryReader(File.OpenRead(inputPath));
+                using var ms = new MemoryStream(compressedData);
+                using var reader = new BinaryReader(ms);
 
                 int symbolCount = reader.ReadInt32();
                 var codeTable = new Dictionary<string, byte>();
@@ -147,7 +138,7 @@ namespace FileCompressorApp.Services
                 }
 
                 int totalBits = reader.ReadInt32();
-                var dataBytes = reader.ReadBytes((int)(reader.BaseStream.Length - reader.BaseStream.Position));
+                var dataBytes = reader.ReadBytes((int)(ms.Length - ms.Position));
 
                 var bitStr = new StringBuilder();
                 foreach (byte b in dataBytes)
@@ -157,7 +148,6 @@ namespace FileCompressorApp.Services
 
                 var current = "";
                 var outputBytes = new List<byte>();
-
                 foreach (char c in bits)
                 {
                     current += c;
@@ -168,22 +158,8 @@ namespace FileCompressorApp.Services
                     }
                 }
 
-                // احفظ الملف في المجلد بعد التأكد من صلاحيات الكتابة
-                string outputFilePath = Path.Combine(outputFolder, Path.GetFileNameWithoutExtension(inputPath) + "_decompressed.bin");
-                File.WriteAllBytes(outputFilePath, outputBytes.ToArray());
-
-                Console.WriteLine($"تم الحفظ في: {outputFilePath}");
+                return outputBytes.ToArray();
             }
-            catch (UnauthorizedAccessException)
-            {
-                Console.WriteLine("خطأ: لا تملك صلاحية الكتابة في هذا المجلد.");
-                throw;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("خطأ: " + ex.Message);
-                throw;
-            }
-        }
+        
     }
 }

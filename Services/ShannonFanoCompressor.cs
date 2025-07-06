@@ -1,29 +1,36 @@
 ﻿using FileCompressorApp.Helpers;
+using FileCompressorApp.Models;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 
 namespace FileCompressorApp.Services
 {
+        public class CompressedResult
+    {
+        public byte[] CompressedData { get; set; }
+        public int OriginalSize { get; set; }
+    }
     public static class ShannonFanoCompressor
     {
         private class SymbolCode
         {
-            public char Symbol;
+            public byte Symbol;
             public int Frequency;
             public string Code = "";
         }
 
-        private static List<SymbolCode> BuildFrequencyTable(string text)
+        private static List<SymbolCode> BuildFrequencyTable(byte[] data)
         {
-            var freqDict = new Dictionary<char, int>();
+            var freqDict = new Dictionary<byte, int>();
 
-            foreach (char c in text)
+            foreach (byte b in data)
             {
-                if (!freqDict.ContainsKey(c))
-                    freqDict[c] = 0;
-                freqDict[c]++;
+                if (!freqDict.ContainsKey(b))
+                    freqDict[b] = 0;
+                freqDict[b]++;
             }
 
             return freqDict
@@ -63,31 +70,80 @@ namespace FileCompressorApp.Services
             BuildShannonFanoCodes(symbols, split + 1, end);
         }
 
-        public static void Compress(string inputFilePath, string outputFilePath, CancellationToken token)
+        public static CompressedResult CompressBytes(byte[] inputData, CancellationToken token)
         {
-
             if (token.IsCancellationRequested)
                 throw new OperationCanceledException(token);
 
-
-            string text = File.ReadAllText(inputFilePath);
-
-            var symbols = BuildFrequencyTable(text);
+            var symbols = BuildFrequencyTable(inputData);
             BuildShannonFanoCodes(symbols, 0, symbols.Count - 1);
 
             var codeTable = symbols.ToDictionary(s => s.Symbol, s => s.Code);
 
             var encoded = new StringBuilder();
-            foreach (char c in text)
+            foreach (var b in inputData)
             {
-                encoded.Append(codeTable[c]);
+                encoded.Append(codeTable[b]);
             }
 
-            var bytes = BitHelper.ConvertToBytes(encoded.ToString());
-            File.WriteAllBytes(outputFilePath, bytes);
+            var compressedData = BitHelper.ConvertToBytes(encoded.ToString());
 
-            File.AppendAllText("log.txt", $"تم ضغط {Path.GetFileName(inputFilePath)} باستخدام Shannon-Fano\n");
+            using var ms = new MemoryStream();
+            using var writer = new BinaryWriter(ms);
+
+            writer.Write(codeTable.Count);
+            foreach (var kvp in codeTable)
+            {
+                writer.Write(kvp.Key);
+                writer.Write(kvp.Value);
+            }
+
+            writer.Write(encoded.Length); // عدد البتات الحقيقية
+            writer.Write(compressedData);
+
+            return new CompressedResult
+            {
+                CompressedData = ms.ToArray(),
+                OriginalSize = inputData.Length
+            };
+        }
+
+        public static byte[] DecompressBytes(byte[] compressedBytes, CancellationToken token)
+        {
+            if (token.IsCancellationRequested)
+                throw new OperationCanceledException(token);
+
+            using var ms = new MemoryStream(compressedBytes);
+            using var reader = new BinaryReader(ms);
+
+            int tableSize = reader.ReadInt32();
+            var codeTable = new Dictionary<string, byte>();
+
+            for (int i = 0; i < tableSize; i++)
+            {
+                byte symbol = reader.ReadByte();
+                string code = reader.ReadString();
+                codeTable[code] = symbol;
+            }
+
+            int bitLength = reader.ReadInt32();
+            byte[] encodedData = reader.ReadBytes((bitLength + 7) / 8);
+            string bitString = BitHelper.ConvertToBitString(encodedData, bitLength);
+
+            var output = new List<byte>();
+            var currentBits = new StringBuilder();
+
+            foreach (char bit in bitString)
+            {
+                currentBits.Append(bit);
+                if (codeTable.TryGetValue(currentBits.ToString(), out byte b))
+                {
+                    output.Add(b);
+                    currentBits.Clear();
+                }
+            }
+
+            return output.ToArray();
         }
     }
 }
-
