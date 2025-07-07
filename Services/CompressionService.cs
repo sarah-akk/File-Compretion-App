@@ -1,5 +1,6 @@
 ﻿using FileCompressorApp.Models;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -48,7 +49,7 @@ namespace FileCompressorApp.Services
 
         //=============================================================>
 
-        public static CompressionResult CompressToArchive(List<string> filePaths, string algorithm, string archiveOutputPath, CancellationToken token , string? password = null)
+        public static CompressionResult CompressToArchive(List<string> filePaths, string algorithm, string archiveOutputPath, CancellationToken token, string? password = null)
         {
             if (token.IsCancellationRequested)
                 token.ThrowIfCancellationRequested();
@@ -59,55 +60,52 @@ namespace FileCompressorApp.Services
                 AlgorithmUsed = algorithm
             };
 
+            var compressedEntries = new ConcurrentBag<(string FileName, byte[] Data, string Algorithm, string? Password)>();
+
             try
             {
-                using var archiveStream = new FileStream(archiveOutputPath, FileMode.Create);
-                using var writer = new BinaryWriter(archiveStream);
-
-                writer.Write(filePaths.Count);
-
-                foreach (var filePath in filePaths)
+                Parallel.ForEach(filePaths, new ParallelOptions { CancellationToken = token }, filePath =>
                 {
-                    if (token.IsCancellationRequested)
-                        token.ThrowIfCancellationRequested();
-
                     if (!File.Exists(filePath))
                         throw new FileNotFoundException($"الملف غير موجود: {filePath}");
 
                     string fileName = Path.GetFileName(filePath);
                     byte[] fileBytes = File.ReadAllBytes(filePath);
-
-                    byte[] compressedBytes;
+                    byte[] compressed;
 
                     switch (algorithm)
                     {
                         case "Huffman":
-                            compressedBytes = HuffmanCompressor.CompressBytes(fileBytes);
+                            compressed = HuffmanCompressor.CompressBytes(fileBytes);
                             break;
-
                         case "Shannon-Fano":
-                            compressedBytes = ShannonFanoCompressor.CompressBytes(fileBytes, token).CompressedData;
+                            compressed = ShannonFanoCompressor.CompressBytes(fileBytes, token).CompressedData;
                             break;
-
                         default:
                             throw new ArgumentException("خوارزمية غير مدعومة");
                     }
 
-                    writer.Write(fileName.Length);
-                    writer.Write(fileName.ToCharArray());
+                    compressedEntries.Add((fileName, compressed, algorithm, password));
+                });
 
-                    writer.Write(string.IsNullOrEmpty(password) ? 0 : password.Length);
-                    if (!string.IsNullOrEmpty(password))
-                        writer.Write(password.ToCharArray());
+                using var archiveStream = new FileStream(archiveOutputPath, FileMode.Create);
+                using var writer = new BinaryWriter(archiveStream);
 
-                    writer.Write(algorithm);
-                    writer.Write(compressedBytes.Length);
-                    writer.Write(compressedBytes);
+                writer.Write(compressedEntries.Count);
 
+                foreach (var entry in compressedEntries)
+                {
+                    writer.Write(entry.FileName.Length);
+                    writer.Write(entry.FileName.ToCharArray());
 
+                    writer.Write(string.IsNullOrEmpty(entry.Password) ? 0 : entry.Password.Length);
+                    if (!string.IsNullOrEmpty(entry.Password))
+                        writer.Write(entry.Password.ToCharArray());
+
+                    writer.Write(entry.Algorithm);
+                    writer.Write(entry.Data.Length);
+                    writer.Write(entry.Data);
                 }
-
-
 
                 result.OriginalSize = filePaths.Sum(f => new FileInfo(f).Length);
                 result.CompressedSize = new FileInfo(archiveOutputPath).Length;
@@ -118,8 +116,10 @@ namespace FileCompressorApp.Services
             {
                 result.Error = ex.Message;
             }
+
             return result;
         }
+
 
         //=============================================================>
 
@@ -131,53 +131,65 @@ namespace FileCompressorApp.Services
             if (!Directory.Exists(outputFolder))
                 Directory.CreateDirectory(outputFolder);
 
-            using var archiveStream = new FileStream(archiveInputPath, FileMode.Open);
+            List<Task> tasks = new();
+            List<string> fileNames = new();
+
+            using var archiveStream = new FileStream(archiveInputPath, FileMode.Open, FileAccess.Read);
             using var reader = new BinaryReader(archiveStream);
 
             int fileCount = reader.ReadInt32();
+            var entries = new List<(string FileName, string Algorithm, string? Password, byte[] Data)>();
 
             for (int i = 0; i < fileCount; i++)
             {
-                if (token.IsCancellationRequested)
-                    return;
+                if (token.IsCancellationRequested) return;
 
                 int fileNameLen = reader.ReadInt32();
                 string fileName = new string(reader.ReadChars(fileNameLen));
-
                 int passwordLen = reader.ReadInt32();
                 string? archivePassword = passwordLen > 0 ? new string(reader.ReadChars(passwordLen)) : null;
-
-                if (!string.IsNullOrEmpty(archivePassword))
-                {
-                    if (archivePassword != userInputPassword)
-                    {
-                        System.Windows.MessageBox.Show(
-                            $"❌ كلمة السر غير صحيحة.\n\n" ,
-                            "خطأ في كلمة السر",
-                            MessageBoxButton.OK,
-                            MessageBoxImage.Error
-                        );
-                        return;
-                    }
-                }
-
 
                 string algorithm = reader.ReadString();
                 int compressedLength = reader.ReadInt32();
                 byte[] compressedBytes = reader.ReadBytes(compressedLength);
 
-                byte[] decompressedBytes = algorithm switch
+                // كلمة السر
+                if (!string.IsNullOrEmpty(archivePassword) && archivePassword != userInputPassword)
                 {
-                    "Huffman" => HuffmanCompressor.DecompressBytes(compressedBytes),
-                    "Shannon-Fano" => ShannonFanoCompressor.DecompressBytes(compressedBytes, token),
-                    _ => throw new ArgumentException("خوارزمية غير معروفة")
-                };
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        System.Windows.MessageBox.Show($"❌ كلمة السر غير صحيحة.\n\n", "خطأ في كلمة السر", MessageBoxButton.OK, MessageBoxImage.Error);
+                    });
+                    return;
+                }
 
-                string outputFilePath = Path.Combine(outputFolder, fileName);
-                File.WriteAllBytes(outputFilePath, decompressedBytes);
-                progress?.Report((i + 1) * 100 / fileCount);
-
+                entries.Add((fileName, algorithm, archivePassword, compressedBytes));
             }
+
+            int completed = 0;
+
+            foreach (var entry in entries)
+            {
+                var task = Task.Run(() =>
+                {
+                    byte[] decompressedBytes = entry.Algorithm switch
+                    {
+                        "Huffman" => HuffmanCompressor.DecompressBytes(entry.Data),
+                        "Shannon-Fano" => ShannonFanoCompressor.DecompressBytes(entry.Data, token),
+                        _ => throw new ArgumentException("خوارزمية غير معروفة")
+                    };
+
+                    string outputFilePath = Path.Combine(outputFolder, entry.FileName);
+                    File.WriteAllBytes(outputFilePath, decompressedBytes);
+
+                    Interlocked.Increment(ref completed);
+                    progress?.Report(completed * 100 / fileCount);
+                });
+
+                tasks.Add(task);
+            }
+
+            Task.WaitAll(tasks.ToArray());
         }
 
         //=============================================================>
