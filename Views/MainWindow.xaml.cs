@@ -1,4 +1,6 @@
-﻿using FileCompressorApp.Services;
+﻿using File_Compretion_App.Views;
+using FileCompressorApp.Services;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -12,6 +14,17 @@ namespace FileCompressorApp
         {
             InitializeComponent();
         }
+
+        private void UsePasswordCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            PasswordBox.Visibility = Visibility.Visible;
+        }
+
+        private void UsePasswordCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            PasswordBox.Visibility = Visibility.Collapsed;
+        }
+
 
         ////=============================================================>
 
@@ -41,14 +54,49 @@ namespace FileCompressorApp
                         CancelDecompressionButton.Visibility = Visibility.Visible;
                         _cts = new CancellationTokenSource();
 
+                        string? userPassword = null;
+
+                        // هنا فقط نفتح الملف لقراءة كلمة السر (واحد فقط)، ثم نغلقه فوراً
+                        using (var archiveStream = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
+                        using (var reader = new BinaryReader(archiveStream))
+                        {
+                            int fileCount = reader.ReadInt32();
+                            if (fileCount == 0)
+                                throw new Exception("الأرشيف فارغ.");
+
+                            int fileNameLen = reader.ReadInt32();
+                            reader.ReadChars(fileNameLen);
+
+                            int passwordLen = reader.ReadInt32();
+                            string? archivePassword = passwordLen > 0 ? new string(reader.ReadChars(passwordLen)) : null;
+
+                            if (!string.IsNullOrEmpty(archivePassword))
+                            {
+                                // إظهار نافذة طلب كلمة السر في الثريد الرئيسي
+                                await Dispatcher.InvokeAsync(() =>
+                                {
+                                    var passwordPrompt = new PasswordPromptDialog();
+                                    if (passwordPrompt.ShowDialog() == true)
+                                    {
+                                        userPassword = passwordPrompt.PasswordBox.Password;
+                                    }
+                                    else
+                                    {
+                                        throw new OperationCanceledException("تم إلغاء فك الضغط بسبب عدم إدخال كلمة السر.");
+                                    }
+                                });
+                            }
+                        }
+
                         var progress = new Progress<int>(percent =>
                         {
                             DecompressionProgressBar.Value = percent;
                         });
 
+                        // الآن نستدعي فك الضغط والذي يفتح الملف بنفسه
                         await Task.Run(() =>
                         {
-                            CompressionService.DecompressArchive(archivePath, outputFolder, _cts.Token , progress);
+                            CompressionService.DecompressArchive(archivePath, outputFolder, _cts.Token, progress, userPassword);
                         });
 
                         var fileNames = HuffmanCompressor.ListFilesInArchive(archivePath);
@@ -86,38 +134,89 @@ namespace FileCompressorApp
             {
                 string archivePath = dialog.FileName;
 
-                // استخراج قائمة الملفات داخل الأرشيف
-                var filesInArchive = HuffmanCompressor.ListFilesInArchive(archivePath);
-                if (filesInArchive == null || filesInArchive.Count == 0)
-                {
-                    System.Windows.MessageBox.Show("الأرشيف فارغ أو تالف.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
-                    return;
-                }
+                string? userPassword = null;
+                string? archivePassword = null;
 
-                // اختيار الملف من قائمة
-                var selectFileDialog = new SelectFileDialog(filesInArchive); 
-                if (selectFileDialog.ShowDialog() == true)
+                try
                 {
-                    string selectedFile = selectFileDialog.SelectedFile;
-
-                    var folderDialog = new System.Windows.Forms.FolderBrowserDialog();
-                    if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                    // قراءة كلمة السر من الأرشيف
+                    using (var archiveStream = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
+                    using (var reader = new BinaryReader(archiveStream))
                     {
-                        string outputFolder = folderDialog.SelectedPath;
+                        int fileCount = reader.ReadInt32();
+                        if (fileCount == 0)
+                            throw new Exception("الأرشيف فارغ.");
 
-                        try
-                        {
-                            HuffmanCompressor.ExtractSingleFile(archivePath, selectedFile, outputFolder);
+                        int fileNameLen = reader.ReadInt32();
+                        reader.ReadChars(fileNameLen);
 
-                            ExtractionResultsListBox.Items.Add($"✅ تم استخراج: {selectedFile}");
-                            
-                            System.Windows.MessageBox.Show($"تم استخراج {selectedFile} بنجاح.", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
-                        }
-                        catch (Exception ex)
+                        int passwordLen = reader.ReadInt32();
+                        archivePassword = passwordLen > 0 ? new string(reader.ReadChars(passwordLen)) : null;
+
+                        if (!string.IsNullOrEmpty(archivePassword))
                         {
-                            System.Windows.MessageBox.Show($"حدث خطأ أثناء استخراج الملف: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                            var passwordPrompt = new PasswordPromptDialog();
+                            if (passwordPrompt.ShowDialog() == true)
+                            {
+                                userPassword = passwordPrompt.PasswordBox.Password;
+
+                                // لغايات الـ Debug فقط
+                                System.Windows.MessageBox.Show(
+                                    $"🔐 كلمة السر المخزنة: {archivePassword}\n🔑 كلمة السر المدخلة: {userPassword}",
+                                    "Debug Password Check",
+                                    MessageBoxButton.OK, MessageBoxImage.Information
+                                );
+
+                                if (archivePassword != userPassword)
+                                {
+                                    System.Windows.MessageBox.Show("❌ كلمة السر غير صحيحة.", "خطأ في كلمة السر", MessageBoxButton.OK, MessageBoxImage.Error);
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                return; // المستخدم ألغى
+                            }
                         }
                     }
+
+                    // استخراج قائمة الملفات داخل الأرشيف
+                    var filesInArchive = HuffmanCompressor.ListFilesInArchive(archivePath);
+                    if (filesInArchive == null || filesInArchive.Count == 0)
+                    {
+                        System.Windows.MessageBox.Show("الأرشيف فارغ أو تالف.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                        return;
+                    }
+
+                    // اختيار الملف من القائمة
+                    var selectFileDialog = new SelectFileDialog(filesInArchive);
+                    if (selectFileDialog.ShowDialog() == true)
+                    {
+                        string selectedFile = selectFileDialog.SelectedFile;
+
+                        var folderDialog = new System.Windows.Forms.FolderBrowserDialog();
+                        if (folderDialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+                        {
+                            string outputFolder = folderDialog.SelectedPath;
+
+                            try
+                            {
+                                CompressionService.ExtractSingleFile(archivePath, selectedFile, outputFolder, userPassword);
+
+                                ExtractionResultsListBox.Items.Add($"✅ تم استخراج: {selectedFile}");
+
+                                System.Windows.MessageBox.Show($"تم استخراج {selectedFile} بنجاح.", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Windows.MessageBox.Show($"حدث خطأ أثناء استخراج الملف: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show($"حدث خطأ: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
@@ -205,10 +304,14 @@ namespace FileCompressorApp
 
             string archivePath = "archive.huf";
 
+            string? password = UsePasswordCheckBox.IsChecked == true
+            ? PasswordBox.Password
+            : null;
+
             try
             {
                 var results = await Task.Run(() =>
-                    CompressionService.CompressToArchive(fileList, algorithm, archivePath, _cts.Token)
+                    CompressionService.CompressToArchive(fileList, algorithm, archivePath, _cts.Token , password)
                 );
 
                 if (_cts.Token.IsCancellationRequested)

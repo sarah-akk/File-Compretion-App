@@ -39,6 +39,8 @@ namespace FileCompressorApp.Services
                 .ToList();
         }
 
+        //=============================================================>
+
         private static void BuildShannonFanoCodes(List<SymbolCode> symbols, int start, int end)
         {
             if (start >= end)
@@ -69,6 +71,7 @@ namespace FileCompressorApp.Services
             BuildShannonFanoCodes(symbols, start, split);
             BuildShannonFanoCodes(symbols, split + 1, end);
         }
+        //=============================================================>
 
         public static CompressedResult CompressBytes(byte[] inputData, CancellationToken token)
         {
@@ -98,7 +101,7 @@ namespace FileCompressorApp.Services
                 writer.Write(kvp.Value);
             }
 
-            writer.Write(encoded.Length); // عدد البتات الحقيقية
+            writer.Write(encoded.Length);
             writer.Write(compressedData);
 
             return new CompressedResult
@@ -107,6 +110,7 @@ namespace FileCompressorApp.Services
                 OriginalSize = inputData.Length
             };
         }
+        //=============================================================>
 
         public static byte[] DecompressBytes(byte[] compressedBytes, CancellationToken token)
         {

@@ -48,8 +48,14 @@
                             <ComboBoxItem Content="Shannon-Fano"/>
                         </ComboBox>
 
-                        <CheckBox x:Name="UsePasswordCheckBox" Content="🔒 استخدم كلمة سر" Margin="15,0"/>
+                        <StackPanel Orientation="Vertical" Margin="15,0">
+                            <CheckBox x:Name="UsePasswordCheckBox" Content="🔒 استخدم كلمة سر" Margin="0,0,0,5" Checked="UsePasswordCheckBox_Checked" Unchecked="UsePasswordCheckBox_Unchecked"/>
+                            <PasswordBox x:Name="PasswordBox" Width="200" Height="25" Margin="0,0,0,10" Visibility="Collapsed"/>
+                        </StackPanel>
+
+                        
                         <CheckBox x:Name="UseThreadsCheckBox" Content="🧵 استخدام Multithreading" Margin="15,0"/>
+                        
                     </StackPanel>
 
                     <!-- ✅ زر التنفيذ + شريط التقدم -->

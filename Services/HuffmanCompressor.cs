@@ -48,54 +48,6 @@ namespace FileCompressorApp.Services
         //=============================================================>
 
 
-        public static void ExtractSingleFile(string archivePath, string fileName, string outputPath)
-        {
-            using (var stream = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
-            using (var reader = new BinaryReader(stream))
-            {
-                int fileCount = reader.ReadInt32();
-
-                for (int i = 0; i < fileCount; i++)
-                {
-                    int fileNameLen = reader.ReadInt32();
-                    var fileNameChars = reader.ReadChars(fileNameLen);
-                    string currentFileName = new string(fileNameChars);
-
-                    string algorithm = reader.ReadString(); 
-
-                    int compressedLength = reader.ReadInt32();
-
-                    if (currentFileName == fileName)
-                    {
-                        byte[] compressedData = reader.ReadBytes(compressedLength);
-
-                        byte[] decompressedData = algorithm switch
-                        {
-                            "Huffman" => HuffmanCompressor.DecompressBytes(compressedData),
-                            "Shannon-Fano" => ShannonFanoCompressor.DecompressBytes(compressedData, CancellationToken.None),
-                            _ => throw new ArgumentException("خوارزمية غير معروفة")
-                        };
-
-                        string outputFile = Path.Combine(outputPath, currentFileName);
-                        Directory.CreateDirectory(Path.GetDirectoryName(outputFile) ?? outputPath);
-                        File.WriteAllBytes(outputFile, decompressedData);
-                        return;
-                    }
-                    else
-                    {
-                        // تخطي بيانات الملف بالكامل
-                        stream.Seek(compressedLength, SeekOrigin.Current);
-                    }
-                }
-
-                throw new FileNotFoundException("الملف غير موجود في الأرشيف.");
-            }
-        }
-
-
-        //=============================================================>
-
-
         private static Dictionary<byte, int> BuildFrequencyTable(byte[] data)
         {
             var freq = new Dictionary<byte, int>();
