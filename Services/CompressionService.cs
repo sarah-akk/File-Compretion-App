@@ -93,7 +93,7 @@ namespace FileCompressorApp.Services
             for (int i = 0; i < fileCount; i++)
             {
                 if (token.IsCancellationRequested)
-                    token.ThrowIfCancellationRequested();
+                    return;
 
                 int fileNameLen = reader.ReadInt32();
                 string fileName = new string(reader.ReadChars(fileNameLen));

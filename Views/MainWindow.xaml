@@ -50,12 +50,12 @@
 
                         <CheckBox x:Name="UsePasswordCheckBox" Content="🔒 استخدم كلمة سر" Margin="15,0"/>
                         <CheckBox x:Name="UseThreadsCheckBox" Content="🧵 استخدام Multithreading" Margin="15,0"/>
-                        <CheckBox x:Name="CompressAsFolderCheckBox" Content="📂 ضغط كمجلد" Margin="15,0"/>
                     </StackPanel>
 
                     <!-- ✅ زر التنفيذ + شريط التقدم -->
                     <StackPanel Grid.Row="3" Margin="0,20,0,0">
                         <Button Content="⚙️ بدء الضغط" Height="35" Width="200" HorizontalAlignment="Center" Click="StartCompression_Click"/>
+                        <!-- ✅إلغاء العملية  -->
                         <Button x:Name="CancelButton"
                         Content="❌ إلغاء العملية"
                         Height="30"
@@ -83,6 +83,15 @@
                     <Button Height="30" Width="150" Content="🧩 فك الضغط" Click="ExtractArchive_Click" Margin="10" Padding="10,5"/>
                     <!-- ✅ زر  لاستخراج ملف واحد -->
                     <Button Height="30" Width="180" Content="📄 استخراج ملف واحد" Click="ExtractSingleFileFromArchive_Click" Margin="10" Padding="10,5"/>
+                    <!-- ✅ إلغاء العملية -->
+                    <Button x:Name="CancelDecompressionButton"
+                    Content="❌ إلغاء فك الضغط"
+                    Height="30"
+                    Width="150"
+                    HorizontalAlignment="Center"
+                    Margin="10"
+                    Visibility="Collapsed"
+                    Click="CancelButton_Click"/>
                     <!-- ✅   + شريط التقدم -->
                     <ProgressBar x:Name="DecompressionProgressBar"
                      Height="20"

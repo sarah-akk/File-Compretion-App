@@ -38,6 +38,9 @@ namespace FileCompressorApp
                         DecompressionProgressBar.Visibility = Visibility.Visible;
                         DecompressionProgressBar.Value = 0;
 
+                        CancelDecompressionButton.Visibility = Visibility.Visible;
+                        _cts = new CancellationTokenSource();
+
                         var progress = new Progress<int>(percent =>
                         {
                             DecompressionProgressBar.Value = percent;
@@ -45,7 +48,7 @@ namespace FileCompressorApp
 
                         await Task.Run(() =>
                         {
-                            CompressionService.DecompressArchive(archivePath, outputFolder, CancellationToken.None, progress);
+                            CompressionService.DecompressArchive(archivePath, outputFolder, _cts.Token , progress);
                         });
 
                         var fileNames = HuffmanCompressor.ListFilesInArchive(archivePath);
@@ -63,6 +66,9 @@ namespace FileCompressorApp
                     finally
                     {
                         DecompressionProgressBar.Visibility = Visibility.Collapsed;
+                        CancelDecompressionButton.Visibility = Visibility.Collapsed;
+                        _cts?.Dispose();
+                        _cts = null;
                     }
                 }
             }
@@ -168,6 +174,8 @@ namespace FileCompressorApp
         {
             _cts?.Cancel();
         }
+
+        ////=============================================================>
 
         private async void StartCompression_Click(object sender, RoutedEventArgs e)
         {
