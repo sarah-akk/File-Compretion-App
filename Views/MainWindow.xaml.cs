@@ -15,16 +15,71 @@ namespace FileCompressorApp
             InitializeComponent();
         }
 
+        ////=============================================================>
+
+
         private void UsePasswordCheckBox_Checked(object sender, RoutedEventArgs e)
         {
             PasswordBox.Visibility = Visibility.Visible;
         }
 
+        ////=============================================================>
+
+
         private void UsePasswordCheckBox_Unchecked(object sender, RoutedEventArgs e)
         {
             PasswordBox.Visibility = Visibility.Collapsed;
         }
+        public void UpdateFileCount() => FileCountText.Text = $"عدد الملفات: {FilesListBox.Items.Count}";
 
+        ////=============================================================>
+
+        private void AddFiles_Click(object sender, RoutedEventArgs e)
+        {
+            var files = FileService.SelectFiles();
+            foreach (var file in files)
+            {
+                if (!FilesListBox.Items.Contains(file))
+                    FilesListBox.Items.Add(file);
+            }
+            UpdateFileCount();
+        }
+
+        ////=============================================================>
+
+        private void AddFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var files = FolderService.SelectFolderFiles();
+            foreach (var file in files)
+            {
+                if (!FilesListBox.Items.Contains(file))
+                    FilesListBox.Items.Add(file);
+            }
+            UpdateFileCount();
+        }
+
+        ////=============================================================>
+
+        private void RemoveSelected_Click(object sender, RoutedEventArgs e)
+        {
+            var selectedItems = FilesListBox.SelectedItems;
+            var itemsToRemove = new System.Collections.Generic.List<object>();
+
+            foreach (var item in selectedItems)
+                itemsToRemove.Add(item);
+
+            foreach (var item in itemsToRemove)
+                FilesListBox.Items.Remove(item);
+
+            UpdateFileCount();
+        }
+
+        ////=============================================================>
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            _cts?.Cancel();
+        }
 
         ////=============================================================>
 
@@ -209,58 +264,6 @@ namespace FileCompressorApp
             }
         }
 
-
-        ////=============================================================>
-        public void UpdateFileCount() => FileCountText.Text = $"عدد الملفات: {FilesListBox.Items.Count}";
-
-        ////=============================================================>
-
-        private void AddFiles_Click(object sender, RoutedEventArgs e)
-        {
-            var files = FileService.SelectFiles();
-            foreach (var file in files)
-            {
-                if (!FilesListBox.Items.Contains(file))
-                    FilesListBox.Items.Add(file);
-            }
-            UpdateFileCount();
-        }
-
-        ////=============================================================>
-
-        private void AddFolder_Click(object sender, RoutedEventArgs e)
-        {
-            var files = FolderService.SelectFolderFiles();
-            foreach (var file in files)
-            {
-                if (!FilesListBox.Items.Contains(file))
-                    FilesListBox.Items.Add(file);
-            }
-            UpdateFileCount();
-        }
-
-        ////=============================================================>
-
-        private void RemoveSelected_Click(object sender, RoutedEventArgs e)
-        {
-            var selectedItems = FilesListBox.SelectedItems;
-            var itemsToRemove = new System.Collections.Generic.List<object>();
-
-            foreach (var item in selectedItems)
-                itemsToRemove.Add(item);
-
-            foreach (var item in itemsToRemove)
-                FilesListBox.Items.Remove(item);
-
-            UpdateFileCount();
-        }
-
-        ////=============================================================>
-
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
-        {
-            _cts?.Cancel();
-        }
 
         ////=============================================================>
 

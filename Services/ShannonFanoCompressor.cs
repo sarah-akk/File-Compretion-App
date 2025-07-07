@@ -13,6 +13,8 @@ namespace FileCompressorApp.Services
         public byte[] CompressedData { get; set; }
         public int OriginalSize { get; set; }
     }
+    //=============================================================>
+
     public static class ShannonFanoCompressor
     {
         private class SymbolCode
@@ -21,6 +23,7 @@ namespace FileCompressorApp.Services
             public int Frequency;
             public string Code = "";
         }
+        //=============================================================>
 
         private static List<SymbolCode> BuildFrequencyTable(byte[] data)
         {
