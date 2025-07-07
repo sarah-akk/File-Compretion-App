@@ -3,6 +3,7 @@ using FileCompressorApp.Services;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 
 namespace FileCompressorApp
 {
@@ -10,8 +11,10 @@ namespace FileCompressorApp
     {
         private CancellationTokenSource _cts;
 
+
         public MainWindow()
         {
+            this.Icon = new BitmapImage(new Uri("pack://application:,,,/images/logo.ico"));
             InitializeComponent();
         }
 
