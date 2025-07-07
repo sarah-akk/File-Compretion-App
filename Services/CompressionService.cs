@@ -10,7 +10,44 @@ using System.Windows;
 namespace FileCompressorApp.Services
 {
     public static class CompressionService
+
     {
+
+        public static List<string> ListFilesInArchive(string archivePath)
+        {
+            var fileNames = new List<string>();
+
+            using (var stream = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
+            using (var reader = new BinaryReader(stream))
+            {
+                int fileCount = reader.ReadInt32();
+
+                for (int i = 0; i < fileCount; i++)
+                {
+                    int fileNameLen = reader.ReadInt32();
+                    var fileNameChars = reader.ReadChars(fileNameLen);
+                    string fileName = new string(fileNameChars);
+
+                    int passwordLength = reader.ReadInt32();
+                    if (passwordLength > 0)
+                    {
+                        reader.ReadChars(passwordLength);
+                    }
+
+                    string algorithm = reader.ReadString();
+
+                    int compressedLength = reader.ReadInt32();
+                    stream.Seek(compressedLength, SeekOrigin.Current);
+
+                    fileNames.Add(fileName);
+                }
+            }
+
+            return fileNames;
+        }
+
+        //=============================================================>
+
         public static CompressionResult CompressToArchive(List<string> filePaths, string algorithm, string archiveOutputPath, CancellationToken token , string? password = null)
         {
             if (token.IsCancellationRequested)

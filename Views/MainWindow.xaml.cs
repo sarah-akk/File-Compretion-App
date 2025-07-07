@@ -99,7 +99,7 @@ namespace FileCompressorApp
                             CompressionService.DecompressArchive(archivePath, outputFolder, _cts.Token, progress, userPassword);
                         });
 
-                        var fileNames = HuffmanCompressor.ListFilesInArchive(archivePath);
+                        var fileNames = CompressionService.ListFilesInArchive(archivePath);
                         foreach (var name in fileNames)
                         {
                             ExtractionResultsListBox.Items.Add($"✅ تم استخراج: {name}");
@@ -160,13 +160,6 @@ namespace FileCompressorApp
                             {
                                 userPassword = passwordPrompt.PasswordBox.Password;
 
-                                // لغايات الـ Debug فقط
-                                System.Windows.MessageBox.Show(
-                                    $"🔐 كلمة السر المخزنة: {archivePassword}\n🔑 كلمة السر المدخلة: {userPassword}",
-                                    "Debug Password Check",
-                                    MessageBoxButton.OK, MessageBoxImage.Information
-                                );
-
                                 if (archivePassword != userPassword)
                                 {
                                     System.Windows.MessageBox.Show("❌ كلمة السر غير صحيحة.", "خطأ في كلمة السر", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -181,12 +174,7 @@ namespace FileCompressorApp
                     }
 
                     // استخراج قائمة الملفات داخل الأرشيف
-                    var filesInArchive = HuffmanCompressor.ListFilesInArchive(archivePath);
-                    if (filesInArchive == null || filesInArchive.Count == 0)
-                    {
-                        System.Windows.MessageBox.Show("الأرشيف فارغ أو تالف.", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
-                    }
+                    var filesInArchive = CompressionService.ListFilesInArchive(archivePath);
 
                     // اختيار الملف من القائمة
                     var selectFileDialog = new SelectFileDialog(filesInArchive);

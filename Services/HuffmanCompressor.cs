@@ -18,35 +18,6 @@ namespace FileCompressorApp.Services
 
         //=============================================================>
 
-        public static List<string> ListFilesInArchive(string archivePath)
-        {
-            var fileNames = new List<string>();
-
-            using (var stream = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
-            using (var reader = new BinaryReader(stream))
-            {
-                int fileCount = reader.ReadInt32();
-
-                for (int i = 0; i < fileCount; i++)
-                {
-                    int fileNameLen = reader.ReadInt32();
-                    var fileNameChars = reader.ReadChars(fileNameLen);
-                    string fileName = new string(fileNameChars);
-
-                    string algorithm = reader.ReadString(); 
-
-                    int compressedLength = reader.ReadInt32();
-                    fileNames.Add(fileName);
-
-                    stream.Seek(compressedLength, SeekOrigin.Current);
-                }
-            }
-
-            return fileNames;
-        }
-
-        //=============================================================>
-
 
         private static Dictionary<byte, int> BuildFrequencyTable(byte[] data)
         {
