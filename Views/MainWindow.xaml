@@ -65,6 +65,7 @@
                         Visibility="Collapsed"
                         Click="CancelButton_Click"/>
                         <ProgressBar x:Name="ProgressBar" Height="20" Margin="0,10,0,0"/>
+                        <!-- ✅   مربع عرض النتائج -->
                         <ListBox x:Name="CompressionResultsListBox"
                          Margin="5"
                          Height="200"
@@ -78,12 +79,18 @@
             <TabItem Header="🗃️ فك الضغط">
                 <StackPanel Margin="10">
                     <TextBlock x:Name="SelectedArchiveText" Margin="5" Foreground="Gray" TextAlignment="Center"/>
-
-                    <Button Height="30" Width="150" Content="🧩 فك الضغط الآن" Click="ExtractArchive_Click" Margin="10" Padding="10,5"/>
-
-                    <!-- ✅ زر جديد لاستخراج ملف واحد -->
+                    <!-- ✅ زر  لاستخراج الارشيف -->
+                    <Button Height="30" Width="150" Content="🧩 فك الضغط" Click="ExtractArchive_Click" Margin="10" Padding="10,5"/>
+                    <!-- ✅ زر  لاستخراج ملف واحد -->
                     <Button Height="30" Width="180" Content="📄 استخراج ملف واحد" Click="ExtractSingleFileFromArchive_Click" Margin="10" Padding="10,5"/>
-
+                    <!-- ✅   + شريط التقدم -->
+                    <ProgressBar x:Name="DecompressionProgressBar"
+                     Height="20"
+                     Margin="10"
+                     Minimum="0"
+                     Maximum="100"
+                     />
+                    <!-- ✅   مربع عرض النتائج -->
                     <ListBox x:Name="ExtractionResultsListBox" Margin="5" Height="200" BorderBrush="Gray" BorderThickness="1"/>
                 </StackPanel>
             </TabItem>

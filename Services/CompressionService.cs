@@ -1,6 +1,7 @@
 ﻿using FileCompressorApp.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -57,7 +58,7 @@ namespace FileCompressorApp.Services
                     writer.Write(fileName.Length);
                     writer.Write(fileName.ToCharArray());
 
-                    writer.Write(algorithm); // إضافة نوع الخوارزمية
+                    writer.Write(algorithm); 
                     writer.Write(compressedBytes.Length);
                     writer.Write(compressedBytes);
                 }
@@ -71,13 +72,12 @@ namespace FileCompressorApp.Services
             {
                 result.Error = ex.Message;
             }
-
             return result;
         }
 
         //=============================================================>
 
-        public static void DecompressArchive(string archiveInputPath, string outputFolder, CancellationToken token)
+        public static void DecompressArchive(string archiveInputPath, string outputFolder, CancellationToken token , IProgress<int>? progress = null)
         {
             if (string.IsNullOrWhiteSpace(outputFolder))
                 outputFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "FileCompressorOutput");
@@ -111,11 +111,13 @@ namespace FileCompressorApp.Services
 
                 string outputFilePath = Path.Combine(outputFolder, fileName);
                 File.WriteAllBytes(outputFilePath, decompressedBytes);
+                progress?.Report((i + 1) * 100 / fileCount);
+
             }
         }
 
         //=============================================================>
-        public static void ExtractSingleFileFromArchive(string archiveInputPath, string outputFolder, string targetFileName, CancellationToken token)
+        public static void ExtractSingleFileFromArchive(string archiveInputPath, string outputFolder, string targetFileName, CancellationToken token, IProgress<int>? progress = null)
         {
             using var archiveStream = new FileStream(archiveInputPath, FileMode.Open);
             using var reader = new BinaryReader(archiveStream);
@@ -159,8 +161,6 @@ namespace FileCompressorApp.Services
                     archiveStream.Seek(compressedLength, SeekOrigin.Current);
                 }
             }
-
-        
 
             throw new FileNotFoundException($"الملف المطلوب '{targetFileName}' غير موجود في الأرشيف.");
         }

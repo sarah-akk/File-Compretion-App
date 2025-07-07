@@ -26,6 +26,7 @@ namespace FileCompressorApp.Services
             return selectedFiles;
         }
 
+        //=============================================================>
         public static string SelectArchiveFile()
         {
             var dialog = new  Microsoft.Win32.OpenFileDialog
@@ -34,6 +35,8 @@ namespace FileCompressorApp.Services
             };
             return dialog.ShowDialog() == true ? dialog.FileName : null;
         }
+
+        //=============================================================>
 
         public static string SelectOutputDirectory()
         {

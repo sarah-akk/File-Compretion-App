@@ -15,7 +15,7 @@ namespace FileCompressorApp
 
         ////=============================================================>
 
-        private void ExtractArchive_Click(object sender, RoutedEventArgs e)
+        private async void ExtractArchive_Click(object sender, RoutedEventArgs e)
         {
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
@@ -32,17 +32,37 @@ namespace FileCompressorApp
                 if (result == System.Windows.Forms.DialogResult.OK)
                 {
                     string outputFolder = folderDialog.SelectedPath;
-
                     try
                     {
-                        // استدعاء الدالة لفك ضغط الأرشيف كاملاً
-                        CompressionService.DecompressArchive(archivePath, outputFolder, CancellationToken.None);
+                        ExtractionResultsListBox.Items.Clear();
+                        DecompressionProgressBar.Visibility = Visibility.Visible;
+                        DecompressionProgressBar.Value = 0;
+
+                        var progress = new Progress<int>(percent =>
+                        {
+                            DecompressionProgressBar.Value = percent;
+                        });
+
+                        await Task.Run(() =>
+                        {
+                            CompressionService.DecompressArchive(archivePath, outputFolder, CancellationToken.None, progress);
+                        });
+
+                        var fileNames = HuffmanCompressor.ListFilesInArchive(archivePath);
+                        foreach (var name in fileNames)
+                        {
+                            ExtractionResultsListBox.Items.Add($"✅ تم استخراج: {name}");
+                        }
 
                         System.Windows.MessageBox.Show("تم فك الضغط بنجاح!", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     catch (Exception ex)
                     {
                         System.Windows.MessageBox.Show($"حدث خطأ: {ex.Message}", "خطأ", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+                    finally
+                    {
+                        DecompressionProgressBar.Visibility = Visibility.Collapsed;
                     }
                 }
             }
@@ -69,7 +89,7 @@ namespace FileCompressorApp
                 }
 
                 // اختيار الملف من قائمة
-                var selectFileDialog = new SelectFileDialog(filesInArchive); // سنضيفه لاحقاً
+                var selectFileDialog = new SelectFileDialog(filesInArchive); 
                 if (selectFileDialog.ShowDialog() == true)
                 {
                     string selectedFile = selectFileDialog.SelectedFile;
@@ -82,6 +102,9 @@ namespace FileCompressorApp
                         try
                         {
                             HuffmanCompressor.ExtractSingleFile(archivePath, selectedFile, outputFolder);
+
+                            ExtractionResultsListBox.Items.Add($"✅ تم استخراج: {selectedFile}");
+                            
                             System.Windows.MessageBox.Show($"تم استخراج {selectedFile} بنجاح.", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
                         }
                         catch (Exception ex)
@@ -146,7 +169,6 @@ namespace FileCompressorApp
             _cts?.Cancel();
         }
 
-
         private async void StartCompression_Click(object sender, RoutedEventArgs e)
         {
             var algorithm = (AlgorithmComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
@@ -201,7 +223,6 @@ namespace FileCompressorApp
                         $"  ⮕ نسبة الضغط: {result.CompressionRatio * 100:F2}%"
                     );
                 }
-
 
                 System.Windows.MessageBox.Show("تم ضغط الملفات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
             }

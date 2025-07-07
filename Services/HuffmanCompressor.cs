@@ -16,6 +16,8 @@ namespace FileCompressorApp.Services
             public Node Right;
         }
 
+        //=============================================================>
+
         public static List<string> ListFilesInArchive(string archivePath)
         {
             var fileNames = new List<string>();
@@ -59,7 +61,7 @@ namespace FileCompressorApp.Services
                     var fileNameChars = reader.ReadChars(fileNameLen);
                     string currentFileName = new string(fileNameChars);
 
-                    string algorithm = reader.ReadString(); // ✅ ضروري هنا
+                    string algorithm = reader.ReadString(); 
 
                     int compressedLength = reader.ReadInt32();
 
@@ -128,7 +130,6 @@ namespace FileCompressorApp.Services
                     Left = left,
                     Right = right
                 };
-
                 queue.Remove(left);
                 queue.Remove(right);
                 queue.Add(parent);
