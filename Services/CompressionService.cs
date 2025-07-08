@@ -49,10 +49,11 @@ namespace FileCompressorApp.Services
 
         //=============================================================>
 
-        public static CompressionResult CompressToArchive(List<string> filePaths, string algorithm, string archiveOutputPath, CancellationToken token, string? password = null)
+        public static CompressionResult CompressToArchive(List<string> filePaths, string algorithm, string archiveOutputPath, CancellationToken token, string? password = null , PauseToken? pauseToken = null)
         {
             if (token.IsCancellationRequested)
                 token.ThrowIfCancellationRequested();
+            pauseToken?.WaitIfPaused();
 
             var result = new CompressionResult
             {
@@ -68,6 +69,8 @@ namespace FileCompressorApp.Services
                 {
                     if (!File.Exists(filePath))
                         throw new FileNotFoundException($"الملف غير موجود: {filePath}");
+
+                    pauseToken?.WaitIfPaused();
 
                     string fileName = Path.GetFileName(filePath);
                     byte[] fileBytes = File.ReadAllBytes(filePath);

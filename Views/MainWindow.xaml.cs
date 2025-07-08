@@ -10,6 +10,7 @@ namespace FileCompressorApp
     public partial class MainWindow : Window
     {
         private CancellationTokenSource _cts;
+        private PauseToken _pauseToken = new PauseToken();
 
 
         public MainWindow()
@@ -83,6 +84,21 @@ namespace FileCompressorApp
         {
             _cts?.Cancel();
         }
+
+        private void PauseButton_Click(object sender, RoutedEventArgs e)
+        {
+            _pauseToken.Pause();
+            PauseButton.Visibility = Visibility.Collapsed;
+            ResumeButton.Visibility = Visibility.Visible;
+        }
+
+        private void ResumeButton_Click(object sender, RoutedEventArgs e)
+        {
+            _pauseToken.Resume();
+            PauseButton.Visibility = Visibility.Visible;
+            ResumeButton.Visibility = Visibility.Collapsed;
+        }
+
 
         ////=============================================================>
 
@@ -291,6 +307,8 @@ namespace FileCompressorApp
 
             _cts = new CancellationTokenSource();
             CancelButton.Visibility = Visibility.Visible;
+            PauseButton.Visibility = Visibility.Visible;
+            ResumeButton.Visibility = Visibility.Collapsed;
 
             var fileList = new List<string>();
             foreach (var item in FilesListBox.Items)
@@ -305,7 +323,7 @@ namespace FileCompressorApp
             try
             {
                 var results = await Task.Run(() =>
-                    CompressionService.CompressToArchive(fileList, algorithm, archivePath, _cts.Token , password)
+                    CompressionService.CompressToArchive(fileList, algorithm, archivePath, _cts.Token , password , _pauseToken)
                 );
 
                 if (_cts.Token.IsCancellationRequested)
@@ -343,6 +361,8 @@ namespace FileCompressorApp
             {
                 ProgressBar.IsIndeterminate = false;
                 CancelButton.Visibility = Visibility.Collapsed;
+                PauseButton.Visibility = Visibility.Collapsed;
+                ResumeButton.Visibility = Visibility.Collapsed;
                 _cts.Dispose();
                 _cts = null;
             }

@@ -39,7 +39,6 @@ namespace File_Compretion_App
 
         private void CompressFileOrFolder(string path)
         {
-            System.Windows.MessageBox.Show($"Path received: {path}", "Debug", MessageBoxButton.OK, MessageBoxImage.Information);
 
             try
             {
