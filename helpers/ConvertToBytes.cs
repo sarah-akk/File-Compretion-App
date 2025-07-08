@@ -35,5 +35,20 @@ namespace FileCompressorApp.Helpers
 
             return sb.ToString();
         }
+
+        public static  byte[] ConvertBitsToBytes(string bits)
+        {
+            int byteCount = (bits.Length + 7) / 8;
+            byte[] bytes = new byte[byteCount];
+            for (int i = 0; i < bits.Length; i++)
+            {
+                if (bits[i] == '1')
+                {
+                    bytes[i / 8] |= (byte)(1 << (7 - (i % 8)));
+                }
+            }
+            return bytes;
+        }
+
     }
 }

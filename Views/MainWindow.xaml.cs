@@ -19,6 +19,28 @@ namespace FileCompressorApp
             InitializeComponent();
         }
 
+        private void ClearAllFiles_Click(object sender, RoutedEventArgs e)
+        {
+            FilesListBox.Items.Clear();
+            UpdateFileCount();
+        }
+        ////=============================================================>
+        ///
+        private void FilesListBox_Drop(object sender, System.Windows.DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
+            {
+                var files = (string[])e.Data.GetData(System.Windows.DataFormats.FileDrop);
+                foreach (var file in files)
+                {
+                    if (!FilesListBox.Items.Contains(file))
+                        FilesListBox.Items.Add(file);
+                }
+                UpdateFileCount();
+            }
+        }
+
+
         ////=============================================================>
 
 
@@ -104,6 +126,7 @@ namespace FileCompressorApp
 
         private async void ExtractArchive_Click(object sender, RoutedEventArgs e)
         {
+
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "Huffman Archive (*.huf)|*.huf"
@@ -112,6 +135,8 @@ namespace FileCompressorApp
             if (dialog.ShowDialog() == true)
             {
                 string archivePath = dialog.FileName;
+                SelectedArchiveText.Text = $"📁 الأرشيف: {Path.GetFileName(archivePath)}";
+
 
                 var folderDialog = new System.Windows.Forms.FolderBrowserDialog();
                 var result = folderDialog.ShowDialog();
@@ -288,6 +313,7 @@ namespace FileCompressorApp
 
         private async void StartCompression_Click(object sender, RoutedEventArgs e)
         {
+
             var algorithm = (AlgorithmComboBox.SelectedItem as ComboBoxItem)?.Content?.ToString();
 
             if (string.IsNullOrEmpty(algorithm))
@@ -314,7 +340,17 @@ namespace FileCompressorApp
             foreach (var item in FilesListBox.Items)
                 fileList.Add(item.ToString());
 
-            string archivePath = "archive.huf";
+            var saveDialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "Huffman Archive (*.huf)|*.huf",
+                FileName = "archive.huf"
+            };
+
+            if (saveDialog.ShowDialog() != true)
+                return;
+
+            string archivePath = saveDialog.FileName;
+
 
             string? password = UsePasswordCheckBox.IsChecked == true
             ? PasswordBox.Password
@@ -341,10 +377,11 @@ namespace FileCompressorApp
                 {
                     CompressionResultsListBox.Items.Add(
                         $"📄 {result.FileName}\n" +
-                        $"  ⮕ الحجم الأصلي: {result.OriginalSize} بايت\n" +
-                        $"  ⮕ الحجم بعد الضغط: {result.CompressedSize} بايت\n" +
+                        $"  ⮕ الحجم الأصلي: {FormatSize(result.OriginalSize)}\n" +
+                        $"  ⮕ الحجم بعد الضغط: {FormatSize(result.CompressedSize)}\n" +
                         $"  ⮕ نسبة الضغط: {result.CompressionRatio * 100:F2}%"
                     );
+
                 }
 
                 System.Windows.MessageBox.Show("تم ضغط الملفات بنجاح", "نجاح", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -367,5 +404,12 @@ namespace FileCompressorApp
                 _cts = null;
             }
         }
+
+        string FormatSize(long bytes)
+        {
+            double sizeMB = bytes / 1024.0 / 1024.0;
+            return $"{sizeMB:F2} ميجابايت";
+        }
+
     }
 }

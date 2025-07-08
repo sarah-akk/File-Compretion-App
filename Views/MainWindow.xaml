@@ -28,7 +28,7 @@
 
                     <!-- ✅ قائمة الملفات -->
                     <Grid Grid.Row="0">
-                        <ListBox x:Name="FilesListBox" BorderBrush="Gray" BorderThickness="1" />
+                        <ListBox x:Name="FilesListBox" BorderBrush="Gray" BorderThickness="1" AllowDrop="True" Drop="FilesListBox_Drop" />
                         <TextBlock x:Name="FileCountText" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,20,5"
                            Foreground="Gray" FontSize="12"/>
                     </Grid>
@@ -38,9 +38,11 @@
                         <Button Content="➕ إضافة ملفات" Margin="5" Padding="10,5" Click="AddFiles_Click"/>
                         <Button Content="➕ إضافة مجلد" Margin="5" Padding="10,5" Click="AddFolder_Click"/>
                         <Button Content="🗑 حذف المحدد" Margin="5" Padding="10,5" Click="RemoveSelected_Click"/>
+                        <Button Content="🗑 حذف الكل" Margin="5" Padding="10,5" Click="ClearAllFiles_Click"/>
                     </StackPanel>
 
                     <!-- ✅ خيارات الضغط -->
+                    
                     <StackPanel Orientation="Horizontal" Grid.Row="2" HorizontalAlignment="Center" Margin="0,10">
                         <TextBlock Text="الخوارزمية:" VerticalAlignment="Center" Margin="5"/>
                         <ComboBox x:Name="AlgorithmComboBox" Width="150" Margin="5">
@@ -59,7 +61,7 @@
                     <!-- ✅ زر التنفيذ + شريط التقدم -->
                     <StackPanel Grid.Row="3" Margin="0,20,0,0">
                         <Button Content="⚙️ بدء الضغط" Height="35" Width="200" HorizontalAlignment="Center" Click="StartCompression_Click"/>
-                        <!-- ✅إلغاء العملية  -->
+                        <!-- ✅إلغاء  + ايقاف مؤقت العملية  -->
                         <StackPanel Orientation="Horizontal" Margin="10">
 
                          <Button x:Name="CancelButton"
@@ -70,8 +72,8 @@
                         Margin="10"
                         Visibility="Collapsed"
                         Click="CancelButton_Click"/>
-                            <Button x:Name="PauseButton" Content="⏸️ إيقاف مؤقت" Click="PauseButton_Click" Visibility="Collapsed" />
-                            <Button x:Name="ResumeButton" Content="▶️ استئناف" Click="ResumeButton_Click" Visibility="Collapsed" />
+                            <Button x:Name="PauseButton" Height="30" Width="150" Content="⏸️ إيقاف مؤقت" Click="PauseButton_Click" Visibility="Collapsed"   HorizontalAlignment="Center"/>
+                            <Button x:Name="ResumeButton" Height="30" Width="150" Content="▶️ استئناف" Click="ResumeButton_Click" Visibility="Collapsed"   HorizontalAlignment="Center" />
                         </StackPanel>
 
                         <ProgressBar x:Name="ProgressBar" Height="20" Margin="0,10,0,0"/>
